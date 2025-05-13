@@ -31,4 +31,4 @@ def benchmark_femtoqueue(num_tasks: int = 1000):
     shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    benchmark_femtoqueue(500)
+    benchmark_femtoqueue(1000)

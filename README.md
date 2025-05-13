@@ -40,6 +40,8 @@ Stale tasks (i.e. in progress for too long) are moved back to `pending` automati
 
 I wouldn't migrate away from your production queue system just yet, but this is faster than you'd expect. Easily fast enough for some small or medium project. Turns out, creating and renaming files is pretty snappy.
 
+Running `python benchmark.py` on a Macbook Pro M1 reports around 4500 pushed tasks/sec and 400 popped tasks/sec. Most of the time is spent opening files.
+
 ## Unit tests
 
 ```bash

@@ -37,7 +37,7 @@ class FemtoQueue:
         makedirs(self.dir_failed, exist_ok=True)
 
     def push(self, data: bytes) -> str:
-        id = uuid4().hex
+        id = f"{uuid4().hex[-12:]}_{str(int(time()))}"
         pending_path = path.join(self.dir_pending, id)
 
         with open(pending_path, "wb") as f:
@@ -66,10 +66,7 @@ class FemtoQueue:
             # Check tasks in this node's in-progress directory
             for task_file in listdir(full_dir_path):
                 task_path = path.join(full_dir_path, task_file)
-                try:
-                    modified_time = path.getmtime(task_path)
-                except FileNotFoundError:
-                    continue  # Task may have been moved concurrently
+                modified_time = int(task_file[13:])
 
                 if now - modified_time < timeout_sec:
                     continue
@@ -82,21 +79,21 @@ class FemtoQueue:
 
     def _pop_task_path(self) -> str | None:
         # First check assigned tasks in progress
-        tasks = [path.join(self.dir_in_progress, p) for p in listdir(self.dir_in_progress)]
-        #tasks.sort(key=lambda x: path.getmtime(x)) # oldest first
+        tasks = listdir(self.dir_in_progress)
         if len(tasks) > 0:
-            return tasks[0]
+            id = min(tasks, key=lambda x: x[13:])
+            return path.join(self.dir_in_progress, id)
 
         # Then check pending tasks
-        tasks = [path.join(self.dir_pending, p) for p in listdir(self.dir_pending)]
-        #tasks.sort(key=lambda x: path.getmtime(x)) # oldest first
+        tasks = listdir(self.dir_pending)
         if len(tasks) > 0:
-            return tasks[0]
+            id = min(tasks, key=lambda x: x[13:])
+            return path.join(self.dir_pending, id)
 
         return None
 
     def pop(self) -> FemtoTask | None:
-        #self._release_stale_tasks()
+        self._release_stale_tasks()
 
         while True:
             task = self._pop_task_path()
