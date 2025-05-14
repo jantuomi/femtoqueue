@@ -1,13 +1,16 @@
 [project]
 name = "femtoqueue"
-version = "0.1.3"
+version = "0.1.4"
 description = "Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = []
 license = "Apache-2.0"
 license-files = ["LICEN[CS]E*"]
-authors = [{ name = "Jan Tuomi", email = "jan@jantuomi.fi" }]
+authors = [
+    { name = "Jan Tuomi", email = "jan@jantuomi.fi" },
+    { name = "Panu Oksiala", email = "panu@oksiala.fi" },
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
