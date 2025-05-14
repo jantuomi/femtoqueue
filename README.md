@@ -1,5 +1,7 @@
 # FemtoQueue
 
+![PyPI - Version](https://img.shields.io/pypi/v/femtoqueue)
+
 Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?
 
 ## Example
@@ -19,7 +21,14 @@ print("All tasks processed")
 
 ## Installation
 
-Just chuck the `femtoqueue.py` file into your Python 3 project. There are no dependencies other than the standard library.
+`femtoqueue` is available on [PyPI](https://pypi.org/project/femtoqueue/).
+
+```bash
+uv add femtoqueue # using uv
+pip install femtoqueue # using pip
+```
+
+Or just chuck the `femtoqueue.py` file into your Python 3 project. There are no dependencies other than the standard library.
 
 ## Features
 
