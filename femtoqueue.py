@@ -15,7 +15,8 @@ class FemtoQueue:
         node_name: str,
         timeout_stale_ms: int = 30_000,
     ):
-        assert node_name != "pending" \
+        assert node_name != "creating" \
+           and node_name != "pending" \
            and node_name != "done" \
            and node_name != "failed"
         self.node_name = node_name
@@ -25,24 +26,32 @@ class FemtoQueue:
         self.latest_stale_check_ts: float | None = None
 
         self.data_dir = data_dir
+        self.dir_creating = path.join(data_dir, "creating")
         self.dir_pending = path.join(data_dir, "pending")
         self.dir_in_progress = path.join(data_dir, node_name)
         self.dir_done = path.join(data_dir, "done")
         self.dir_failed = path.join(data_dir, "failed")
 
         makedirs(self.data_dir, exist_ok=True)
+        makedirs(self.dir_creating, exist_ok=True)
         makedirs(self.dir_pending, exist_ok=True)
         makedirs(self.dir_in_progress, exist_ok=True)
         makedirs(self.dir_done, exist_ok=True)
         makedirs(self.dir_failed, exist_ok=True)
 
-    def push(self, data: bytes) -> str:
+    def _gen_increasing_uuid(self) -> str:
         now_us = 1_000_000 * time.time()
-        id = f"{str(int(now_us))}_{uuid4().hex[-12:]}"
+        return f"{str(int(now_us))}_{uuid4().hex[-12:]}"
+
+    def push(self, data: bytes) -> str:
+        id = self._gen_increasing_uuid()
+        creating_path = path.join(self.dir_creating, id)
         pending_path = path.join(self.dir_pending, id)
 
-        with open(pending_path, "wb") as f:
+        with open(creating_path, "wb") as f:
             f.write(data)
+
+        rename(creating_path, pending_path)
 
         return id
 
