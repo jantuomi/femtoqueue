@@ -9,21 +9,27 @@ class FemtoTask:
     data: bytes
 
 class FemtoQueue:
+    RESERVED_NAMES = [
+        "creating",
+        "pending",
+        "done",
+        "failed",
+    ]
+
     def __init__(
         self,
         data_dir: str,
         node_name: str,
         timeout_stale_ms: int = 30_000,
     ):
-        assert node_name != "creating" \
-           and node_name != "pending" \
-           and node_name != "done" \
-           and node_name != "failed"
+        assert node_name not in self.RESERVED_NAMES
         self.node_name = node_name
 
         assert timeout_stale_ms > 0
         self.timeout_stale_ms = timeout_stale_ms
         self.latest_stale_check_ts: float | None = None
+
+        self.todo_cache: list[str] = []
 
         self.data_dir = data_dir
         self.dir_creating = path.join(data_dir, "creating")
@@ -71,7 +77,7 @@ class FemtoQueue:
             # Skip non-directories and reserved names
             if not path.isdir(full_dir_path):
                 continue
-            if dir_name in ("pending", "done", "failed", self.node_name):
+            if dir_name in self.RESERVED_NAMES + [self.node_name]:
                 continue
 
             # Check tasks in this node's in-progress directory
@@ -90,17 +96,23 @@ class FemtoQueue:
                     continue  # Task may have been moved by another node
 
     def _pop_task_path(self) -> str | None:
-        # First check assigned tasks in progress
-        tasks = listdir(self.dir_in_progress)
-        if len(tasks) > 0:
-            id = min(tasks)
-            return path.join(self.dir_in_progress, id)
+        # Check cache
+        if len(self.todo_cache) > 0:
+            return self.todo_cache.pop(0)
+
+        # If cache empty, then check assigned tasks in progress (aborted)
+        self.todo_cache = listdir(self.dir_in_progress)
+        self.todo_cache = [path.join(self.dir_in_progress, x) for x in self.todo_cache]
+        self.todo_cache.sort()
+        if len(self.todo_cache) > 0:
+            return self.todo_cache.pop(0)
 
         # Then check pending tasks
-        tasks = listdir(self.dir_pending)
-        if len(tasks) > 0:
-            id = min(tasks)
-            return path.join(self.dir_pending, id)
+        self.todo_cache = listdir(self.dir_pending)
+        self.todo_cache = [path.join(self.dir_pending, x) for x in self.todo_cache]
+        self.todo_cache.sort()
+        if len(self.todo_cache) > 0:
+            return self.todo_cache.pop(0)
 
         return None
 
