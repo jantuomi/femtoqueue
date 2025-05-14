@@ -53,6 +53,7 @@ class FemtoQueue:
         timeout_sec = self.timeout_stale_ms / 1000.0
         if self.latest_stale_check_ts is not None and now - self.latest_stale_check_ts < timeout_sec:
             return
+        self.latest_stale_check_ts = now
 
         for dir_name in listdir(self.data_dir):
             full_dir_path = path.join(self.data_dir, dir_name)
