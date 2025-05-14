@@ -1,6 +1,8 @@
 # FemtoQueue
 
-![PyPI - Version](https://img.shields.io/pypi/v/femtoqueue)
+<a href="https://pypi.org/project/femtoqueue/">
+<img alt="PyPI - Version" src="https://img.shields.io/pypi/v/femtoqueue">
+</a>
 
 Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?
 
