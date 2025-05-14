@@ -6,6 +6,16 @@ import json
 from femtoqueue import FemtoQueue, FemtoTask
 from tempfile import mkdtemp
 
+original_time_fn = time.time
+def set_time_mock(ts: float):
+    def mock_time_fn():
+        return ts
+
+    time.time = mock_time_fn
+
+def reset_time_mock():
+    time.time = original_time_fn
+
 class TestFemtoQueue(unittest.TestCase):
     def test_basic(self):
         dir = mkdtemp()
@@ -63,26 +73,31 @@ class TestFemtoQueue(unittest.TestCase):
 
     def test_release_stale_tasks(self):
         dir = mkdtemp()
+        timeout_stale_ms = 100
 
+        set_time_mock(0)
         # Node1 creates and claims the task
-        q1 = FemtoQueue(data_dir=dir, node_name="node1", timeout_stale_ms=100)
+        q1 = FemtoQueue(data_dir=dir, node_name="node1", timeout_stale_ms=timeout_stale_ms)
         q1.push(b"stuck")
         task = q1.pop()
         self.assertIsNotNone(task)
         task = cast(FemtoTask, task)
 
-        # Simulate the task becoming stale by changing mtime
-        task_path = os.path.join(dir, "node1", task.id)
-        old_time = time.time() - 9999
-        os.utime(task_path, (old_time, old_time))
+        # Assert that node2 can not see the task
+        q2 = FemtoQueue(data_dir=dir, node_name="node2", timeout_stale_ms=timeout_stale_ms)
+        non_existant_task = q2.pop()
+        self.assertIsNone(non_existant_task)
+
+        # Simulate the task becoming stale by skipping forward in time
+        set_time_mock(10)
 
         # Now node2 should see the task as stale and reclaim it
-        q2 = FemtoQueue(data_dir=dir, node_name="node2", timeout_stale_ms=100)
         revived_task = q2.pop()
         self.assertIsNotNone(revived_task)
         revived_task = cast(FemtoTask, revived_task)
         self.assertEqual(revived_task.data, b"stuck")
-        self.assertEqual(revived_task.id, task.id)
+
+        reset_time_mock()
 
     def test_mark_task_failed(self):
         dir = mkdtemp()
