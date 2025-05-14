@@ -1,6 +1,6 @@
 # FemtoQueue
 
-Ever wanted a zero-dependency, filesystem-backed, durable, concurrent, retrying task queue implementation? No?
+Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?
 
 ## Example
 
@@ -50,4 +50,4 @@ python test.py
 
 ## Author and license
 
-Jan Tuomi <<jan@jantuomi.fi>>. Licensed under AGPL 3.0. All rights reserved.
+Jan Tuomi <<jan@jantuomi.fi>>. Licensed under Apache-2.0. All rights reserved.
