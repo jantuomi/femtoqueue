@@ -139,5 +139,28 @@ class TestFemtoQueue(unittest.TestCase):
         # The task should not be returned again
         self.assertIsNone(q.pop())
 
+    def test_fifo_order(self):
+        dir = mkdtemp()
+        q = FemtoQueue(data_dir=dir, node_name="node1")
+
+        num_tasks = 100
+
+        # Push tasks with sequential numbers as content
+        for i in range(num_tasks):
+            q.push(str(i).encode("utf-8"))
+
+        last_value = -1
+        for _ in range(num_tasks):
+            task = q.pop()
+            self.assertIsNotNone(task)
+            task = cast(FemtoTask, task)
+            current_value = int(task.data.decode("utf-8"))
+            self.assertEqual(current_value, last_value + 1)
+            last_value = current_value
+            q.done(task)
+
+        # Queue should now be empty
+        self.assertIsNone(q.pop())
+
 if __name__ == '__main__':
     unittest.main()
