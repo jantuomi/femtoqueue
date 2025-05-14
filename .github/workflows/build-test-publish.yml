@@ -35,4 +35,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: uv publish
         env:
-          UV_PYPI_TOKEN: ${{ secrets.UV_PYPI_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PYPI_TOKEN }}
