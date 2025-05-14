@@ -13,7 +13,7 @@ Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent
 ```python
 from femtoqueue import FemtoQueue, FemtoTask
 
-q = FemtoQueue(data_dir = "fq", node_id = "node1")
+q = FemtoQueue(data_dir = "fq", node_name = "node1")
 q.push("foobar".encode("utf-8"))
 
 while task := q.pop():
