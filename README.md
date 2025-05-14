@@ -4,6 +4,10 @@
 <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/femtoqueue">
 </a>
 
+<a href="https://github.com/jantuomi/femtoqueue/actions/workflows/build-test-publish.yml">
+<img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/jantuomi/femtoqueue/build-test-publish.yml">
+</a>
+
 Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?
 
 ## Example

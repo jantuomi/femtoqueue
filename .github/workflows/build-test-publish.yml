@@ -33,6 +33,26 @@ jobs:
 
       - name: Publish to PyPI
         if: github.ref == 'refs/heads/main'
-        run: uv publish
+        run: |
+          set +e
+
+          # Run uv publish and capture output
+          OUTPUT=$(uv publish 2>&1)
+          STATUS=$?
+
+          set -eo pipefail
+
+          echo "$OUTPUT"
+
+          if [ $STATUS -eq 0 ]; then
+            echo "✅ Publish succeeded."
+            exit 0
+          elif echo "$OUTPUT" | grep -q "400 File already exists"; then
+            echo "⚠️ Package version already exists on PyPI. Skipping publish."
+            exit 0
+          else
+            echo "❌ Publish failed unexpectedly."
+            exit $STATUS
+          fi
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.UV_PYPI_TOKEN }}
