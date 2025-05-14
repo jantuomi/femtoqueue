@@ -1,0 +1,38 @@
+name: Test, Build, and Publish
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  test-build-publish:
+    runs-on: ubuntu-latest
+    name: Test, Build and Publish
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Run tests
+        run: python test.py
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        if: github.ref == 'refs/heads/main'
+        run: uv publish
+        env:
+          UV_PYPI_TOKEN: ${{ secrets.UV_PYPI_TOKEN }}
