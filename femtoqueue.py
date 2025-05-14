@@ -1,6 +1,5 @@
-from os import makedirs, path, listdir, rename
+from os import makedirs, path, listdir, rename, urandom
 from dataclasses import dataclass
-from uuid import uuid4
 import time
 from typing import Generator
 @dataclass
@@ -47,7 +46,8 @@ class FemtoQueue:
 
     def _gen_increasing_uuid(self) -> str:
         now_us = 1_000_000 * time.time()
-        return f"{str(int(now_us))}_{uuid4().hex[-12:]}"
+        rand_bytes = urandom(8)
+        return f"{str(int(now_us))}_{rand_bytes.hex}"
 
     def push(self, data: bytes) -> str:
         id = self._gen_increasing_uuid()
