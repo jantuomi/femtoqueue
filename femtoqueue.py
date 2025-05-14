@@ -2,7 +2,7 @@ from os import makedirs, path, listdir, rename
 from dataclasses import dataclass
 from uuid import uuid4
 import time
-
+from typing import Generator
 @dataclass
 class FemtoTask:
     id: str
@@ -29,7 +29,7 @@ class FemtoQueue:
         self.timeout_stale_ms = timeout_stale_ms
         self.latest_stale_check_ts: float | None = None
 
-        self.todo_cache: list[str] = []
+        self.todo_cache: Generator[str, None, None] | None = None
 
         self.data_dir = data_dir
         self.dir_creating = path.join(data_dir, "creating")
@@ -97,23 +97,25 @@ class FemtoQueue:
 
     def _pop_task_path(self) -> str | None:
         # Check cache
-        if len(self.todo_cache) > 0:
-            return self.todo_cache.pop(0)
+        if self.todo_cache:
+            try:
+                return next(self.todo_cache)
+            except StopIteration:
+                pass
 
         # If cache empty, then check assigned tasks in progress (aborted)
-        self.todo_cache = listdir(self.dir_in_progress)
-        self.todo_cache = [path.join(self.dir_in_progress, x) for x in self.todo_cache]
-        self.todo_cache.sort()
-        if len(self.todo_cache) > 0:
-            return self.todo_cache.pop(0)
+        self.todo_cache = (path.join(self.dir_in_progress, x) for x in sorted(listdir(self.dir_in_progress)))
+        try:
+            return next(self.todo_cache)
+        except StopIteration:
+            pass
 
         # Then check pending tasks
-        self.todo_cache = listdir(self.dir_pending)
-        self.todo_cache = [path.join(self.dir_pending, x) for x in self.todo_cache]
-        self.todo_cache.sort()
-        if len(self.todo_cache) > 0:
-            return self.todo_cache.pop(0)
-
+        self.todo_cache = (path.join(self.dir_pending, x) for x in sorted(listdir(self.dir_pending)))
+        try:
+            return next(self.todo_cache)
+        except StopIteration:
+            pass
         return None
 
     def pop(self) -> FemtoTask | None:
