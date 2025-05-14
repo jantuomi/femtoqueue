@@ -25,22 +25,22 @@ Just chuck the `femtoqueue.py` file into your Python 3 project. There are no dep
 
 This mini-library provides the `FemtoQueue` class with the standard queue interface:
 
-| Method                         | Description                         |
-| :----------------------------- | :---------------------------------- |
-| `push(task: FemtoTask) -> str` | Add a task to the queue, returns id |
-| `pop() -> FemtoTask`           | Get a task from the queue           |
+| Method                     | Description                         |
+| :------------------------- | :---------------------------------- |
+| `push(task: bytes) -> str` | Add a task to the queue, returns id |
+| `pop() -> FemtoTask`       | Get a task from the queue           |
 
-Each task corresponds to one file in the `data_dir` directory. State changes are atomic since they use `mv` (or its Python equivalent `os.rename`).
+Each task corresponds to one file in the `data_dir` directory. State changes are atomic since they use `rename()`. The task can contain whatever you want, the queue does not inspect it in any way.
 
 Each concurrent worker node (library user) must have a stable identifier `node_id`. This way workers can automatically retry a task if they unexpectedly crash in the middle of processing.
 
-Stale tasks (i.e. in progress for too long) are moved back to `pending` automatically when a timeout is reached (default: 30s).
+Stale tasks (i.e. in progress for too long) are moved back to `pending` automatically after a timeout is reached (default: 30s).
 
 ## But isn't this slow?
 
 I wouldn't migrate away from your production queue system just yet, but this is faster than you'd expect. Easily fast enough for some small or medium project. Turns out, creating and renaming files is pretty snappy.
 
-Running `python benchmark.py` on a Macbook Pro M1 reports around 4500 pushed tasks/sec and 400 popped tasks/sec. Most of the time is spent opening files.
+Running the microbenchmark `python benchmark_mini.py` on a Macbook Pro M1 reports around 4500 pushed tasks/sec and 400 popped tasks/sec. Most of the time is spent opening files. A heftier FreeBSD machine was able to reach 21000 pushed/sec and 7400 popped/sec. Note that these are not very scientific numbers.
 
 ## Unit tests
 

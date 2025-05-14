@@ -1,7 +1,7 @@
 import time
 import tempfile
 import shutil
-from femtoqueue import FemtoQueue, FemtoTask
+from femtoqueue import FemtoQueue
 
 def benchmark_femtoqueue(num_tasks: int = 1000):
     tmpdir = tempfile.mkdtemp()
