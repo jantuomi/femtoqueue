@@ -3,7 +3,7 @@ name = "femtoqueue"
 version = "0.1.5"
 description = "Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = []
 license = "Apache-2.0"
 license-files = ["LICEN[CS]E*"]
