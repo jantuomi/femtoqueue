@@ -8,7 +8,7 @@ from femtoqueue import FemtoQueue
 def run_benchmark(duration_seconds: int, payload_size: int = 100):
     print(f"Running throughput benchmark for {duration_seconds} sec. See -h for help.")
     tmpdir = tempfile.mkdtemp()
-    q = FemtoQueue(data_dir=tmpdir, node_name="node1")
+    q = FemtoQueue(data_dir=tmpdir, node_id="node1")
     payload = b"x" * payload_size
 
     total_count = 0

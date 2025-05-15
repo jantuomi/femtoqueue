@@ -18,11 +18,11 @@ class FemtoQueue:
     def __init__(
         self,
         data_dir: str,
-        node_name: str,
+        node_id: str,
         timeout_stale_ms: int = 30_000,
     ):
-        assert node_name not in self.RESERVED_NAMES
-        self.node_name = node_name
+        assert node_id not in self.RESERVED_NAMES
+        self.node_id = node_id
 
         assert timeout_stale_ms > 0
         self.timeout_stale_ms = timeout_stale_ms
@@ -33,7 +33,7 @@ class FemtoQueue:
         self.data_dir = data_dir
         self.dir_creating = path.join(data_dir, "creating")
         self.dir_pending = path.join(data_dir, "pending")
-        self.dir_in_progress = path.join(data_dir, node_name)
+        self.dir_in_progress = path.join(data_dir, node_id)
         self.dir_done = path.join(data_dir, "done")
         self.dir_failed = path.join(data_dir, "failed")
 
@@ -77,7 +77,7 @@ class FemtoQueue:
             # Skip non-directories and reserved names
             if not path.isdir(full_dir_path):
                 continue
-            if dir_name in self.RESERVED_NAMES + [self.node_name]:
+            if dir_name in self.RESERVED_NAMES + [self.node_id]:
                 continue
 
             # Check tasks in this node's in-progress directory

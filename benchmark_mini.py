@@ -5,7 +5,7 @@ from femtoqueue import FemtoQueue
 
 def benchmark_femtoqueue(num_tasks: int = 1000):
     tmpdir = tempfile.mkdtemp()
-    queue = FemtoQueue(data_dir=tmpdir, node_name="node1")
+    queue = FemtoQueue(data_dir=tmpdir, node_id="node1")
 
     data = b"x" * 100  # 100-byte payload
 
