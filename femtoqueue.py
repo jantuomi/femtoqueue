@@ -2,6 +2,7 @@ from os import makedirs, path, listdir, rename, urandom, fsync
 from dataclasses import dataclass
 import time
 from typing import Generator
+
 @dataclass
 class FemtoTask:
     id: str
@@ -20,8 +21,23 @@ class FemtoQueue:
         data_dir: str,
         node_id: str,
         timeout_stale_ms: int = 30_000,
-        sync_after_write: bool = True,
+        sync_after_write: bool = False,
     ):
+        """
+        Construct a FemtoQueue client.
+
+        Parameters
+        ----------
+        data_dir : str
+            Directory where data files are persisted
+        node_id : str
+            Stable identifier for this instance
+        timeout_stale_ms : int, default 30_000
+            Time in milliseconds after which clients can release in-progress tasks back to pending.
+        sync_after_write : bool, default False
+            Run fsync() after writes to ensure data is synced to disk. Useful if you're worried about sudden power loss.
+            Setting this on will slow down writes. Not necessary on certain file systems, such as ZFS.
+        """
         assert node_id not in self.RESERVED_NAMES
         self.node_id = node_id
 
@@ -53,6 +69,19 @@ class FemtoQueue:
         return f"{str(int(now_us))}_{rand_bytes.hex}"
 
     def push(self, data: bytes) -> str:
+        """
+        Push a new task into the queue.
+
+        Parameters
+        ----------
+        data : bytes
+            A bytes object representing the task. For JSON, you can use `json.dumps(obj).encode("utf-8")`.
+
+        Returns
+        -------
+        id : str
+            The task identifier, i.e. the file name.
+        """
         id = self._gen_increasing_uuid()
         creating_path = path.join(self.dir_creating, id)
         pending_path = path.join(self.dir_pending, id)
@@ -124,6 +153,15 @@ class FemtoQueue:
         return None
 
     def pop(self) -> FemtoTask | None:
+        """
+        Pop the oldest available task from the queue, or `None` if empty.
+        If previous task processing was aborted (process was terminated unexpectedly), this method will return that incomplete task,
+        effectively providing retry capability. If not, this will return the oldest task from "pending" state, if one exists.
+
+        Returns
+        -------
+        task : FemtoTask or None
+        """
         self._release_stale_tasks()
 
         while True:
@@ -144,6 +182,14 @@ class FemtoQueue:
                 return FemtoTask(id = id, data = content)
 
     def done(self, task: FemtoTask):
+        """
+        Move a task to "done" status.
+
+        Parameters
+        ----------
+        task : FemtoTask
+            The in-progress task instance.
+        """
         in_progress_path = path.join(self.dir_in_progress, task.id)
         done_path = path.join(self.dir_done, task.id)
 
@@ -153,6 +199,14 @@ class FemtoQueue:
             raise Exception(f"Tried to complete a task that is not in progress, id={task.id}") from e
 
     def fail(self, task: FemtoTask):
+        """
+        Move a task to "failed" status.
+
+        Parameters
+        ----------
+        task : FemtoTask
+            The in-progress task instance.
+        """
         in_progress_path = path.join(self.dir_in_progress, task.id)
         failed_path = path.join(self.dir_failed, task.id)
 
