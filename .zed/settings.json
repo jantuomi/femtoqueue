@@ -1,0 +1,13 @@
+{
+  "format_on_save": "on",
+  "languages": {
+    "Python": {
+      "formatter": {
+        "external": {
+          "command": ".venv/bin/ruff",
+          "arguments": ["format", "-"]
+        }
+      }
+    }
+  }
+}

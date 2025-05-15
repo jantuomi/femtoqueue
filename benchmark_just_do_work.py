@@ -9,6 +9,7 @@
 import argparse
 from femtoqueue import FemtoQueue
 
+
 def benchmark_femtoqueue(data_dir: str, num_tasks: int = 1000):
     queue = FemtoQueue(data_dir=data_dir, node_id="node1")
 
@@ -23,9 +24,14 @@ def benchmark_femtoqueue(data_dir: str, num_tasks: int = 1000):
             break
         queue.done(task)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FemtoQueue: Just run some tasks for external benchmarking")
-    parser.add_argument("data_dir", type=str, help="Data directory. Won't be cleaned up!")
+    parser = argparse.ArgumentParser(
+        description="FemtoQueue: Just run some tasks for external benchmarking"
+    )
+    parser.add_argument(
+        "data_dir", type=str, help="Data directory. Won't be cleaned up!"
+    )
     args = parser.parse_args()
 
     benchmark_femtoqueue(args.data_dir)

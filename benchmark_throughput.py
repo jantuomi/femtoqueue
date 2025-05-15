@@ -5,6 +5,7 @@ import argparse
 from random import randint
 from femtoqueue import FemtoQueue
 
+
 def run_benchmark(duration_seconds: int, payload_size: int = 100):
     print(f"Running throughput benchmark for {duration_seconds} sec. See -h for help.")
     tmpdir = tempfile.mkdtemp()
@@ -47,9 +48,16 @@ def run_benchmark(duration_seconds: int, payload_size: int = 100):
     print(f"Total tasks processed: {total_count}")
     print(f"Overall throughput: {total_count / elapsed:.2f} tasks/sec")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FemtoQueue throughput benchmark")
-    parser.add_argument("--duration", type=int, help="Duration to run the benchmark (in seconds)", default=10, required=False)
+    parser.add_argument(
+        "--duration",
+        type=int,
+        help="Duration to run the benchmark (in seconds)",
+        default=10,
+        required=False,
+    )
     args = parser.parse_args()
 
     run_benchmark(args.duration)

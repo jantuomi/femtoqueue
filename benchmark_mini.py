@@ -3,6 +3,7 @@ import tempfile
 import shutil
 from femtoqueue import FemtoQueue
 
+
 def benchmark_femtoqueue(num_tasks: int = 1000):
     tmpdir = tempfile.mkdtemp()
     queue = FemtoQueue(data_dir=tmpdir, node_id="node1")
@@ -26,9 +27,12 @@ def benchmark_femtoqueue(num_tasks: int = 1000):
         queue.done(task)
         processed += 1
     process_duration = time.time() - start
-    print(f"Processed in {process_duration:.4f}s ({processed / process_duration:.2f} tasks/sec)")
+    print(
+        f"Processed in {process_duration:.4f}s ({processed / process_duration:.2f} tasks/sec)"
+    )
 
     shutil.rmtree(tmpdir)
+
 
 if __name__ == "__main__":
     benchmark_femtoqueue(1000)

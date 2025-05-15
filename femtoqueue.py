@@ -3,10 +3,12 @@ from dataclasses import dataclass
 import time
 from typing import Generator
 
+
 @dataclass
 class FemtoTask:
     id: str
     data: bytes
+
 
 class FemtoQueue:
     RESERVED_NAMES = [
@@ -101,8 +103,12 @@ class FemtoQueue:
         # Only run this every `timeout_stale_ms` milliseconds because iterating
         # through all tasks is slow
         timeout_sec = self.timeout_stale_ms / 1000.0
-        if self.latest_stale_check_ts is not None and now - self.latest_stale_check_ts < timeout_sec:
+        if (
+            self.latest_stale_check_ts is not None
+            and now - self.latest_stale_check_ts < timeout_sec
+        ):
             return
+
         self.latest_stale_check_ts = now
 
         for dir_name in listdir(self.data_dir):
@@ -138,14 +144,19 @@ class FemtoQueue:
                 pass
 
         # If cache empty, then check assigned tasks in progress (aborted)
-        self.todo_cache = (path.join(self.dir_in_progress, x) for x in sorted(listdir(self.dir_in_progress)))
+        self.todo_cache = (
+            path.join(self.dir_in_progress, x)
+            for x in sorted(listdir(self.dir_in_progress))
+        )
         try:
             return next(self.todo_cache)
         except StopIteration:
             pass
 
         # Then check pending tasks
-        self.todo_cache = (path.join(self.dir_pending, x) for x in sorted(listdir(self.dir_pending)))
+        self.todo_cache = (
+            path.join(self.dir_pending, x) for x in sorted(listdir(self.dir_pending))
+        )
         try:
             return next(self.todo_cache)
         except StopIteration:
@@ -166,7 +177,8 @@ class FemtoQueue:
 
         while True:
             task = self._pop_task_path()
-            if task is None: return None
+            if task is None:
+                return None
 
             id = path.basename(task)
             in_progress_path = path.join(self.dir_in_progress, id)
@@ -179,7 +191,7 @@ class FemtoQueue:
 
             with open(in_progress_path, "rb") as f:
                 content = f.read()
-                return FemtoTask(id = id, data = content)
+                return FemtoTask(id=id, data=content)
 
     def done(self, task: FemtoTask):
         """
@@ -196,7 +208,9 @@ class FemtoQueue:
         try:
             rename(in_progress_path, done_path)
         except FileNotFoundError as e:
-            raise Exception(f"Tried to complete a task that is not in progress, id={task.id}") from e
+            raise Exception(
+                f"Tried to complete a task that is not in progress, id={task.id}"
+            ) from e
 
     def fail(self, task: FemtoTask):
         """
@@ -213,4 +227,6 @@ class FemtoQueue:
         try:
             rename(in_progress_path, failed_path)
         except FileNotFoundError as e:
-            raise Exception(f"Tried to fail a task that is not in progress, id={task.id}") from e
+            raise Exception(
+                f"Tried to fail a task that is not in progress, id={task.id}"
+            ) from e
