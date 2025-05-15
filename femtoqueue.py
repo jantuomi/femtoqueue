@@ -1,4 +1,4 @@
-from os import makedirs, path, listdir, rename, urandom
+from os import makedirs, path, listdir, rename, urandom, fsync
 from dataclasses import dataclass
 import time
 from typing import Generator
@@ -20,6 +20,7 @@ class FemtoQueue:
         data_dir: str,
         node_id: str,
         timeout_stale_ms: int = 30_000,
+        sync_after_write: bool = True,
     ):
         assert node_id not in self.RESERVED_NAMES
         self.node_id = node_id
@@ -27,6 +28,8 @@ class FemtoQueue:
         assert timeout_stale_ms > 0
         self.timeout_stale_ms = timeout_stale_ms
         self.latest_stale_check_ts: float | None = None
+
+        self.sync_after_write = sync_after_write
 
         self.todo_cache: Generator[str, None, None] | None = None
 
@@ -56,6 +59,8 @@ class FemtoQueue:
 
         with open(creating_path, "wb") as f:
             f.write(data)
+            if self.sync_after_write:
+                fsync(f)
 
         rename(creating_path, pending_path)
 
