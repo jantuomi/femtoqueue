@@ -170,6 +170,40 @@ class TestFemtoQueue(unittest.TestCase):
         # Queue should now be empty
         self.assertIsNone(q.pop())
 
+    def test_only_past_tasks_are_popped(self):
+        dir = mkdtemp()
+        q = FemtoQueue(data_dir=dir, node_id="node1")
+
+        set_time_mock(1000)
+        q.push("foobar".encode("utf-8"))
+
+        set_time_mock(0)
+        task = q.pop()
+        self.assertIsNone(task)
+
+        set_time_mock(2000)
+        task = q.pop()
+        self.assertIsNotNone(task)
+
+        reset_time_mock()
+
+    def test_schedule_for_future(self):
+        dir = mkdtemp()
+        q = FemtoQueue(data_dir=dir, node_id="node1")
+
+        future_ts = time.time() + 60
+        future_ts_us = int(1_000_000 * future_ts)
+        q.push("foobar".encode("utf-8"), time_us=future_ts_us)
+
+        task = q.pop()
+        self.assertIsNone(task)
+
+        set_time_mock(future_ts + 60)
+        task = q.pop()
+        self.assertIsNotNone(task)
+
+        reset_time_mock()
+
 
 if __name__ == "__main__":
     unittest.main()

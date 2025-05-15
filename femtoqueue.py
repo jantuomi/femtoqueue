@@ -65,12 +65,14 @@ class FemtoQueue:
         makedirs(self.dir_done, exist_ok=True)
         makedirs(self.dir_failed, exist_ok=True)
 
-    def _gen_increasing_uuid(self) -> str:
-        now_us = 1_000_000 * time.time()
-        rand_bytes = urandom(8)
-        return f"{str(int(now_us))}_{rand_bytes.hex}"
+    def _gen_increasing_uuid(self, time_us: int | None) -> str:
+        if not time_us:
+            time_us = int(1_000_000 * time.time())
 
-    def push(self, data: bytes) -> str:
+        rand_bytes = urandom(8)
+        return f"{str(time_us)}_{rand_bytes.hex}"
+
+    def push(self, data: bytes, time_us: int | None = None) -> str:
         """
         Push a new task into the queue.
 
@@ -78,13 +80,16 @@ class FemtoQueue:
         ----------
         data : bytes
             A bytes object representing the task. For JSON, you can use `json.dumps(obj).encode("utf-8")`.
+        time_us : int or None
+            A timestamp in microseconds. If not None, the current time is used. Only past tasks are available with `pop()`.
+            Future timestamps can be used to schedule tasks.
 
         Returns
         -------
         id : str
             The task identifier, i.e. the file name.
         """
-        id = self._gen_increasing_uuid()
+        id = self._gen_increasing_uuid(time_us)
         creating_path = path.join(self.dir_creating, id)
         pending_path = path.join(self.dir_pending, id)
 
@@ -136,6 +141,11 @@ class FemtoQueue:
                     continue  # Task may have been moved by another node
 
     def _pop_task_path(self) -> str | None:
+        now_us = time.time() * 1_000_000
+
+        def _only_past(task_name: str) -> bool:
+            return int(task_name.split("_")[0]) <= now_us
+
         # Check cache
         if self.todo_cache:
             try:
@@ -146,7 +156,7 @@ class FemtoQueue:
         # If cache empty, then check assigned tasks in progress (aborted)
         self.todo_cache = (
             path.join(self.dir_in_progress, x)
-            for x in sorted(listdir(self.dir_in_progress))
+            for x in sorted(filter(_only_past, listdir(self.dir_in_progress)))
         )
         try:
             return next(self.todo_cache)
@@ -155,7 +165,8 @@ class FemtoQueue:
 
         # Then check pending tasks
         self.todo_cache = (
-            path.join(self.dir_pending, x) for x in sorted(listdir(self.dir_pending))
+            path.join(self.dir_pending, x)
+            for x in sorted(filter(_only_past, listdir(self.dir_pending)))
         )
         try:
             return next(self.todo_cache)
