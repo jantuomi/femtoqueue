@@ -39,8 +39,9 @@ class FemtoQueue:
         timeout_stale_ms : int, default 30_000
             Time in milliseconds after which clients can release in-progress tasks back to pending.
         sync_after_write : bool, default False
-            Run fsync() after writes to ensure data is synced to disk. Useful if you're worried about sudden power loss.
-            Setting this on will slow down writes. Not necessary on certain file systems, such as ZFS.
+            Run fsync() after writes to ensure data is synced to disk. Useful if you're worried about sudden power loss,
+            but note that integrity checks will discard invalid writes even when sync_after_write is off.
+            Setting sync_after_write on will slow down writes. Not necessary on certain file systems, such as ZFS.
         """
         assert node_id not in self.RESERVED_NAMES
         self.node_id = node_id

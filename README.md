@@ -11,7 +11,7 @@ Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent
 ## Example
 
 ```python
-from femtoqueue import FemtoQueue, FemtoTask
+from femtoqueue import FemtoQueue
 
 q = FemtoQueue(data_dir = "fq", node_id = "node1")
 q.push("foobar".encode("utf-8"))
