@@ -1,6 +1,6 @@
 [project]
 name = "femtoqueue"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ever wanted a zero-dependency, filesystem-backed, lock-free, durable, concurrent, retrying task queue implementation? No?"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,7 +28,4 @@ build-backend = "setuptools.build_meta"
 py-modules = ["femtoqueue"]
 
 [dependency-groups]
-dev = [
-    "pyinstrument>=5.0.1",
-    "ruff>=0.11.9",
-]
+dev = ["pyinstrument>=5.0.1", "ruff>=0.11.9"]
