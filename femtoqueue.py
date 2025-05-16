@@ -2,6 +2,8 @@ from os import makedirs, path, listdir, rename, urandom, fsync
 from dataclasses import dataclass
 import time
 from typing import Generator
+from io import BufferedReader, BufferedWriter
+from hashlib import md5
 
 
 @dataclass
@@ -72,6 +74,38 @@ class FemtoQueue:
         rand_bytes = urandom(8)
         return f"{str(time_us)}_{rand_bytes.hex}"
 
+    def _write_v1(self, f: BufferedWriter, data: bytes):
+        version = (1).to_bytes(1, "little")  # 1 byte
+        padding = (0).to_bytes(7, "little")  # 7 bytes
+        hash = md5(data).digest()
+        header = version + padding + hash
+        f.write(header)
+        f.write(data)
+
+    def _read_v1(self, f: BufferedReader) -> bytes | None:
+        version_bytes = f.read(1)
+        if version_bytes is None or len(version_bytes) == 0:
+            return None
+
+        version = version_bytes[0]
+        if version != 1:
+            return None
+
+        f.seek(8)
+        stored_hash = f.read(16)
+        if stored_hash is None or len(stored_hash) != 16:
+            return None
+
+        data = f.read()
+        if data is None:
+            return None
+
+        data_hash = md5(data).digest()
+        if data_hash != stored_hash:
+            return None
+
+        return data
+
     def push(self, data: bytes, time_us: int | None = None) -> str:
         """
         Push a new task into the queue.
@@ -94,7 +128,7 @@ class FemtoQueue:
         pending_path = path.join(self.dir_pending, id)
 
         with open(creating_path, "wb") as f:
-            f.write(data)
+            self._write_v1(f, data)
             if self.sync_after_write:
                 fsync(f)
 
@@ -201,8 +235,11 @@ class FemtoQueue:
                 continue
 
             with open(in_progress_path, "rb") as f:
-                content = f.read()
-                return FemtoTask(id=id, data=content)
+                data = self._read_v1(f)
+                if data is None:
+                    # Data was corrupted, skip
+                    continue
+                return FemtoTask(id=id, data=data)
 
     def done(self, task: FemtoTask):
         """
