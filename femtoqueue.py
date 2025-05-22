@@ -1,4 +1,4 @@
-from os import makedirs, path, listdir, rename, urandom, fsync
+from os import makedirs, path, PathLike, listdir, rename, urandom, fsync
 from dataclasses import dataclass
 import time
 from typing import Generator
@@ -23,7 +23,7 @@ class FemtoQueue:
 
     def __init__(
         self,
-        data_dir: str,
+        data_dir: PathLike,
         node_id: str,
         timeout_stale_ms: int = 30_000,
         sync_after_write: bool = False,
@@ -33,7 +33,7 @@ class FemtoQueue:
 
         Parameters
         ----------
-        data_dir : str
+        data_dir : os.PathLike
             Directory where data files are persisted
         node_id : str
             Stable identifier for this instance
