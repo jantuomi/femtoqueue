@@ -11,10 +11,10 @@ def benchmark_femtoqueue(num_tasks: int = 1000):
     data = b"x" * 100  # 100-byte payload
 
     print(f"Pushing {num_tasks} tasks...")
-    start = time.time()
+    start = time.monotonic()
     for _ in range(num_tasks):
         queue.push(data)
-    push_duration = time.time() - start
+    push_duration = time.monotonic() - start
     print(f"Pushed in {push_duration:.4f}s ({num_tasks / push_duration:.2f} tasks/sec)")
 
     print("Processing tasks (pop + done)...")
@@ -26,7 +26,7 @@ def benchmark_femtoqueue(num_tasks: int = 1000):
             break
         queue.done(task)
         processed += 1
-    process_duration = time.time() - start
+    process_duration = time.monotonic() - start
     print(
         f"Processed in {process_duration:.4f}s ({processed / process_duration:.2f} tasks/sec)"
     )

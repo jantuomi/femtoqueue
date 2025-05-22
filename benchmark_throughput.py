@@ -14,11 +14,11 @@ def run_benchmark(duration_seconds: int, payload_size: int = 100):
 
     total_count = 0
     count_per_second = 0
-    start_time = last_report_time = time.time()
+    start_time = last_report_time = time.monotonic()
 
     try:
         while True:
-            now = time.time()
+            now = time.monotonic()
             if now - start_time >= duration_seconds:
                 break
 
@@ -40,7 +40,7 @@ def run_benchmark(duration_seconds: int, payload_size: int = 100):
                 last_report_time = now
 
     finally:
-        elapsed = time.time() - start_time
+        elapsed = time.monotonic() - start_time
         print("Cleaning up...")
         shutil.rmtree(tmpdir)
 
