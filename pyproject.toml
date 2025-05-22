@@ -28,4 +28,4 @@ build-backend = "setuptools.build_meta"
 py-modules = ["femtoqueue"]
 
 [dependency-groups]
-dev = ["pyinstrument>=5.0.1", "ruff>=0.11.9"]
+dev = ["mypy>=1.15.0", "pyinstrument>=5.0.1", "ruff>=0.11.9"]

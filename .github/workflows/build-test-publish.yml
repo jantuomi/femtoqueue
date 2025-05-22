@@ -25,8 +25,11 @@ jobs:
       - name: Install uv
         run: pip install uv
 
+      - name: Run typecheck
+        run: uv run mypy .
+
       - name: Run tests
-        run: python test.py
+        run: uv run python test.py
 
       - name: Build package
         run: uv build
