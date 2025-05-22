@@ -23,7 +23,7 @@ class FemtoQueue:
 
     def __init__(
         self,
-        data_dir: PathLike,
+        data_dir: PathLike | str,
         node_id: str,
         timeout_stale_ms: int = 30_000,
         sync_after_write: bool = False,
@@ -33,7 +33,7 @@ class FemtoQueue:
 
         Parameters
         ----------
-        data_dir : os.PathLike
+        data_dir : os.PathLike or str
             Directory where data files are persisted
         node_id : str
             Stable identifier for this instance
