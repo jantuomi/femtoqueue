@@ -18,6 +18,7 @@ class FemtoQueue:
         "pending",
         "done",
         "failed",
+        "scheduled",
     ]
 
     def __init__(
@@ -48,7 +49,7 @@ class FemtoQueue:
 
         assert timeout_stale_ms > 0
         self.timeout_stale_ms = timeout_stale_ms
-        self.latest_stale_check_ts: float | None = None
+        self.latest_stale_check_ts_us: int | None = None
 
         self.sync_after_write = sync_after_write
 
@@ -60,6 +61,7 @@ class FemtoQueue:
         self.dir_in_progress = path.join(data_dir, node_id)
         self.dir_done = path.join(data_dir, "done")
         self.dir_failed = path.join(data_dir, "failed")
+        self.dir_scheduled = path.join(data_dir, "scheduled")
 
         makedirs(self.data_dir, exist_ok=True)
         makedirs(self.dir_creating, exist_ok=True)
@@ -67,11 +69,35 @@ class FemtoQueue:
         makedirs(self.dir_in_progress, exist_ok=True)
         makedirs(self.dir_done, exist_ok=True)
         makedirs(self.dir_failed, exist_ok=True)
+        makedirs(self.dir_scheduled, exist_ok=True)
 
-    def _gen_increasing_uuid(self, time_us: int | None) -> str:
-        if not time_us:
-            time_us = int(1_000_000 * time.time())
+        self.monotonic_time_started_us: int = int(time.monotonic() * 1_000_000)
+        self.reference_time_us: int = self._resolve_reference_time_us()
 
+        self.interval_check_scheduled_us = 1_000_000
+        self.latest_scheduled_check_ts_us: int | None = None
+
+    def _resolve_reference_time_us(self) -> int:
+        tasks_pending = listdir(self.dir_pending)
+        newest_ts_us = None
+        for task_name in tasks_pending:
+            ts_us = int(task_name.split("_")[0])
+            if newest_ts_us is None or ts_us > newest_ts_us:
+                newest_ts_us = ts_us
+
+        if newest_ts_us is None:
+            return int(time.time() * 1_000_000)
+        else:
+            return newest_ts_us
+
+    def _monotonic_time_now_us(self) -> int:
+        return (
+            self.reference_time_us
+            + int(time.monotonic() * 1_000_000)
+            - self.monotonic_time_started_us
+        )
+
+    def _gen_increasing_uuid(self, time_us: int) -> str:
         rand_bytes = urandom(8)
         return f"{str(time_us)}_{rand_bytes.hex}"
 
@@ -107,17 +133,18 @@ class FemtoQueue:
 
         return data
 
-    def push(self, data: bytes, time_us: int | None = None) -> str:
+    def schedule(self, data: bytes, time_us: int) -> str:
         """
-        Push a new task into the queue.
+        Schedule a new task to be pushed to the queue at the given timestamp.
+        Upon calling `pop`, scheduled tasks whose timestamp is in the past (based on time-of-day clock, i.e. `time.time()`)
+        will be moved to the end of the queue. Note that these events will get a different ID when moved.
 
         Parameters
         ----------
         data : bytes
             A bytes object representing the task. For JSON, you can use `json.dumps(obj).encode("utf-8")`.
-        time_us : int or None
-            A timestamp in microseconds. If not None, the current time is used. Only past tasks are available with `pop()`.
-            Future timestamps can be used to schedule tasks.
+        time_us : int
+            A timestamp in microseconds.
 
         Returns
         -------
@@ -125,6 +152,34 @@ class FemtoQueue:
             The task identifier, i.e. the file name.
         """
         id = self._gen_increasing_uuid(time_us)
+        creating_path = path.join(self.dir_creating, id)
+        scheduled_path = path.join(self.dir_scheduled, id)
+
+        with open(creating_path, "wb") as f:
+            self._write_v1(f, data)
+            if self.sync_after_write:
+                fsync(f)
+
+        rename(creating_path, scheduled_path)
+
+        return id
+
+    def push(self, data: bytes) -> str:
+        """
+        Push a new task into the queue.
+
+        Parameters
+        ----------
+        data : bytes
+            A bytes object representing the task. For JSON, you can use `json.dumps(obj).encode("utf-8")`.
+
+        Returns
+        -------
+        id : str
+            The task identifier, i.e. the file name.
+        """
+        m_now_us = self._monotonic_time_now_us()
+        id = self._gen_increasing_uuid(m_now_us)
         creating_path = path.join(self.dir_creating, id)
         pending_path = path.join(self.dir_pending, id)
 
@@ -137,19 +192,17 @@ class FemtoQueue:
 
         return id
 
-    def _release_stale_tasks(self):
-        now = time.time()
-
+    def _release_stale_tasks(self, m_now_us: int):
         # Only run this every `timeout_stale_ms` milliseconds because iterating
         # through all tasks is slow
-        timeout_sec = self.timeout_stale_ms / 1000.0
+        timeout_us = self.timeout_stale_ms * 1_000
         if (
-            self.latest_stale_check_ts is not None
-            and now - self.latest_stale_check_ts < timeout_sec
+            self.latest_stale_check_ts_us is not None
+            and m_now_us - self.latest_stale_check_ts_us < timeout_us
         ):
             return
 
-        self.latest_stale_check_ts = now
+        self.latest_stale_check_ts_us = m_now_us
 
         for dir_name in listdir(self.data_dir):
             full_dir_path = path.join(self.data_dir, dir_name)
@@ -164,9 +217,8 @@ class FemtoQueue:
             for task_file in listdir(full_dir_path):
                 task_path = path.join(full_dir_path, task_file)
                 modified_time_us = int(task_file.split("_")[0])
-                modified_time = modified_time_us / 1_000_000.0
 
-                if now - modified_time < timeout_sec:
+                if m_now_us - modified_time_us < timeout_us:
                     continue
 
                 try:
@@ -175,12 +227,31 @@ class FemtoQueue:
                 except FileNotFoundError:
                     continue  # Task may have been moved by another node
 
+    def _trigger_scheduled_tasks(self, m_now_us: int):
+        if (
+            self.latest_scheduled_check_ts_us is not None
+            and m_now_us - self.latest_scheduled_check_ts_us
+            < self.interval_check_scheduled_us
+        ):
+            return
+
+        self.latest_scheduled_check_ts_us = m_now_us
+
+        w_now_us = int(time.time() * 1_000_000)  # wall clock time
+
+        for task_file in listdir(self.dir_scheduled):
+            scheduled_time_us = int(task_file.split("_")[0])
+
+            if scheduled_time_us < w_now_us:
+                scheduled_path = path.join(self.dir_scheduled, task_file)
+                id = self._gen_increasing_uuid(m_now_us)
+                try:
+                    pending_path = path.join(self.dir_pending, id)
+                    rename(scheduled_path, pending_path)
+                except FileNotFoundError:
+                    continue  # Task may have been moved by another node
+
     def _pop_task_path(self) -> str | None:
-        now_us = time.time() * 1_000_000
-
-        def _only_past(task_name: str) -> bool:
-            return int(task_name.split("_")[0]) <= now_us
-
         # Check cache
         if self.todo_cache:
             try:
@@ -191,7 +262,7 @@ class FemtoQueue:
         # If cache empty, then check assigned tasks in progress (aborted)
         self.todo_cache = (
             path.join(self.dir_in_progress, x)
-            for x in sorted(filter(_only_past, listdir(self.dir_in_progress)))
+            for x in sorted(listdir(self.dir_in_progress))
         )
         try:
             return next(self.todo_cache)
@@ -200,8 +271,7 @@ class FemtoQueue:
 
         # Then check pending tasks
         self.todo_cache = (
-            path.join(self.dir_pending, x)
-            for x in sorted(filter(_only_past, listdir(self.dir_pending)))
+            path.join(self.dir_pending, x) for x in sorted(listdir(self.dir_pending))
         )
         try:
             return next(self.todo_cache)
@@ -219,7 +289,9 @@ class FemtoQueue:
         -------
         task : FemtoTask or None
         """
-        self._release_stale_tasks()
+        m_now_us = self._monotonic_time_now_us()
+        self._release_stale_tasks(m_now_us)
+        self._trigger_scheduled_tasks(m_now_us)
 
         while True:
             task = self._pop_task_path()
